@@ -1,0 +1,28 @@
+[Unit]
+Description=Rust Todo App with HTTPS Support
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/projects/todo-app
+ExecStart=/root/projects/todo-app/target/release/todo-app
+Restart=always
+RestartSec=10
+
+# Environment variables for HTTPS
+Environment=USE_HTTPS=true
+Environment=PORT=443
+Environment=CERT_PATH=/etc/ssl/certs/todo-app.pem
+Environment=KEY_PATH=/etc/ssl/private/todo-app.key
+Environment=DATABASE_URL=sqlite:/var/lib/todo-app/todos.db
+Environment=JWT_SECRET=your-production-jwt-secret-change-this
+
+# Security settings
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/todo-app
+
+[Install]
+WantedBy=multi-user.target
