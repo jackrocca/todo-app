@@ -33,14 +33,16 @@ pub struct Database {
 impl Database {
     pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
         let pool = SqlitePool::connect(database_url).await?;
-        
-        // Create tables
+
+        // Create tables if they don't exist
         sqlx::query("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE, email TEXT UNIQUE, password_hash TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
-            .execute(&pool).await?;
-        
+            .execute(&pool)
+            .await?;
+
         sqlx::query("CREATE TABLE IF NOT EXISTS todos (id TEXT PRIMARY KEY, text TEXT, completed BOOLEAN DEFAULT FALSE, category TEXT, tags TEXT, priority TEXT, due_date DATETIME, user_id TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
-            .execute(&pool).await?;
-        
+            .execute(&pool)
+            .await?;
+
         Ok(Database { pool })
     }
 
@@ -51,7 +53,9 @@ impl Database {
     pub async fn create_todo(&self, new_todo: NewTodo, user_id: Option<&str>) -> Result<Todo, sqlx::Error> {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now();
-        let tags_json = new_todo.tags.map(|tags| serde_json::to_string(&tags).unwrap_or_default());
+        let tags_json = new_todo
+            .tags
+            .map(|tags| serde_json::to_string(&tags).unwrap_or_default());
 
         sqlx::query("INSERT INTO todos (id, text, completed, category, tags, priority, due_date, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(&id)
@@ -82,9 +86,19 @@ impl Database {
     }
 
     pub async fn get_todos(&self, user_id: Option<&str>) -> Result<Vec<Todo>, sqlx::Error> {
-        let rows = sqlx::query("SELECT id, text, completed, category, tags, priority, due_date, user_id, created_at, updated_at FROM todos ORDER BY created_at DESC")
-            .fetch_all(&self.pool)
-            .await?;
+        let rows = match user_id {
+            Some(uid) => {
+                sqlx::query("SELECT id, text, completed, category, tags, priority, due_date, user_id, created_at, updated_at FROM todos WHERE user_id = ? OR user_id IS NULL ORDER BY created_at DESC")
+                    .bind(uid)
+                    .fetch_all(&self.pool)
+                    .await?
+            }
+            None => {
+                sqlx::query("SELECT id, text, completed, category, tags, priority, due_date, user_id, created_at, updated_at FROM todos WHERE user_id IS NULL ORDER BY created_at DESC")
+                    .fetch_all(&self.pool)
+                    .await?
+            }
+        };
 
         let mut todos = Vec::new();
         for row in rows {
@@ -106,7 +120,7 @@ impl Database {
 
     pub async fn toggle_todo(&self, id: &str) -> Result<Option<Todo>, sqlx::Error> {
         let now = Utc::now();
-        
+
         sqlx::query("UPDATE todos SET completed = NOT completed, updated_at = ? WHERE id = ?")
             .bind(&now)
             .bind(id)
@@ -141,8 +155,10 @@ impl Database {
             .fetch_all(&self.pool)
             .await?;
 
-        Ok(rows.into_iter()
-            .filter_map(|row| row.get::<Option<String>, _>("category"))
-            .collect())
+        Ok(
+            rows.into_iter()
+                .filter_map(|row| row.get::<Option<String>, _>("category"))
+                .collect(),
+        )
     }
 }

@@ -1,6 +1,6 @@
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use rustls_pemfile::{certs, pkcs8_private_keys};
-use std::{fs::File, io::BufReader, path::Path, sync::Arc};
+use std::{fs::File, io::BufReader, sync::Arc};
 use tokio_rustls::TlsAcceptor;
 
 pub fn load_tls_config(cert_path: &str, key_path: &str) -> Result<Arc<ServerConfig>, Box<dyn std::error::Error>> {

@@ -4,7 +4,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use sqlx::{Row, SqlitePool};
@@ -15,16 +15,6 @@ use uuid::Uuid;
 pub struct Claims {
     pub sub: String,
     pub exp: usize,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct User {
-    pub id: String,
-    pub username: String,
-    pub email: String,
-    pub password_hash: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -122,27 +112,6 @@ impl AuthService {
 
         encode(&Header::default(), &claims, &EncodingKey::from_secret(self.jwt_secret.as_ref()))
             .map_err(|_| AuthError::TokenError)
-    }
-
-    pub async fn get_user_by_id(&self, user_id: &str) -> Result<Option<User>, AuthError> {
-        let row = sqlx::query("SELECT id, username, email, password_hash, created_at, updated_at FROM users WHERE id = ?")
-            .bind(user_id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|_| AuthError::DatabaseError)?;
-
-        if let Some(row) = row {
-            Ok(Some(User {
-                id: row.get("id"),
-                username: row.get("username"),
-                email: row.get("email"),
-                password_hash: row.get("password_hash"),
-                created_at: row.get("created_at"),
-                updated_at: row.get("updated_at"),
-            }))
-        } else {
-            Ok(None)
-        }
     }
 
     fn decode_token(&self, token: &str) -> Result<Claims, AuthError> {
