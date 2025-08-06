@@ -66,9 +66,9 @@ async fn main() {
                 
                 loop {
                     let (stream, _) = listener.accept().await.unwrap();
-                    let tls_stream = tls_acceptor.accept(stream).await.unwrap();
+                    let _tls_stream = tls_acceptor.accept(stream).await.unwrap();
                     let app = app.clone();
-                    
+
                     tokio::spawn(async move {
                         let _ = axum::serve(tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap(), app).await;
                     });
