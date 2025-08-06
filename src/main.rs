@@ -8,11 +8,11 @@ use axum::{
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
-mod auth;
-mod database;
+mod simple_auth;
+mod simple_db;
 mod https;
-use auth::{AuthService, LoginRequest, RegisterRequest};
-use database::{Database, NewTodo, Todo};
+use simple_auth::{AuthService, LoginRequest, RegisterRequest};
+use simple_db::{Database, NewTodo, Todo};
 
 #[tokio::main]
 async fn main() {
@@ -39,7 +39,7 @@ async fn main() {
         .route("/categories", get(get_categories))
         .route_layer(middleware::from_fn_with_state(
             auth_service.clone(),
-            auth::auth_middleware,
+            simple_auth::auth_middleware,
         ));
 
     let app = public_routes
@@ -383,7 +383,7 @@ async fn home() -> Html<&'static str> {
 async fn register(
     axum::extract::State((_, auth_service)): axum::extract::State<(Arc<Database>, Arc<AuthService>)>,
     Json(req): Json<RegisterRequest>,
-) -> Result<Json<auth::AuthResponse>, StatusCode> {
+) -> Result<Json<simple_auth::AuthResponse>, StatusCode> {
     match auth_service.register(req).await {
         Ok(response) => Ok(Json(response)),
         Err(err) => Err(err.into()),
@@ -393,7 +393,7 @@ async fn register(
 async fn login(
     axum::extract::State((_, auth_service)): axum::extract::State<(Arc<Database>, Arc<AuthService>)>,
     Json(req): Json<LoginRequest>,
-) -> Result<Json<auth::AuthResponse>, StatusCode> {
+) -> Result<Json<simple_auth::AuthResponse>, StatusCode> {
     match auth_service.login(req).await {
         Ok(response) => Ok(Json(response)),
         Err(err) => Err(err.into()),

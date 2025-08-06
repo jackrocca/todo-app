@@ -3,17 +3,26 @@ name = "todo-app"
 version = "0.1.0"
 edition = "2024"
 
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+debug = 0
+incremental = true
+
 [dependencies]
-axum = "0.7"
-tokio = { version = "1", features = ["full"] }
-tower = "0.4"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono"] }
-chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
-jsonwebtoken = "9.0"
-bcrypt = "0.15"
+axum = { version = "0.7", default-features = false, features = ["http1", "json", "matched-path", "original-uri", "tokio", "tower-log"] }
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "net", "macros"] }
+tower = { version = "0.4", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0", default-features = false }
+sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "chrono"] }
+chrono = { version = "0.4", default-features = false, features = ["serde", "clock"] }
+uuid = { version = "1.0", default-features = false, features = ["v4", "serde"] }
+jsonwebtoken = { version = "9.0", default-features = false }
+bcrypt = { version = "0.15", default-features = false, features = ["std"] }
 async-trait = "0.1"
 rustls = "0.21"
 rustls-pemfile = "1.0"

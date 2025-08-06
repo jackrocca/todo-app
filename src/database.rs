@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool, Row};
 use uuid::Uuid;
 
-#[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Todo {
     pub id: String,
     pub text: String,
@@ -34,8 +34,12 @@ impl Database {
     pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
         let pool = SqlitePool::connect(database_url).await?;
         
-        // Run migrations
-        sqlx::migrate!("./migrations").run(&pool).await?;
+        // Create tables if they don't exist
+        sqlx::query("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY NOT NULL, username TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)")
+            .execute(&pool).await?;
+        
+        sqlx::query("CREATE TABLE IF NOT EXISTS todos (id TEXT PRIMARY KEY NOT NULL, text TEXT NOT NULL, completed BOOLEAN NOT NULL DEFAULT FALSE, category TEXT, tags TEXT, priority TEXT CHECK (priority IN ('high', 'medium', 'low')), due_date DATETIME, user_id TEXT REFERENCES users(id), created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)")
+            .execute(&pool).await?;
         
         Ok(Database { pool })
     }
@@ -49,7 +53,7 @@ impl Database {
         let now = Utc::now();
         let tags_json = new_todo.tags.map(|tags| serde_json::to_string(&tags).unwrap_or_default());
 
-        let todo = sqlx::query_as!(
+        let todo = sqlx::query_as(
             Todo,
             r#"
             INSERT INTO todos (id, text, completed, category, tags, priority, due_date, user_id, created_at, updated_at)
@@ -67,7 +71,7 @@ impl Database {
     pub async fn get_todos(&self, user_id: Option<&str>) -> Result<Vec<Todo>, sqlx::Error> {
         let todos = match user_id {
             Some(uid) => {
-                sqlx::query_as!(
+                sqlx::query_as(
                     Todo,
                     r#"
                     SELECT id, text, completed, category, tags, priority, due_date as "due_date: DateTime<Utc>", user_id, created_at as "created_at: DateTime<Utc>", updated_at as "updated_at: DateTime<Utc>"
@@ -81,7 +85,7 @@ impl Database {
                 .await?
             }
             None => {
-                sqlx::query_as!(
+                sqlx::query_as(
                     Todo,
                     r#"
                     SELECT id, text, completed, category, tags, priority, due_date as "due_date: DateTime<Utc>", user_id, created_at as "created_at: DateTime<Utc>", updated_at as "updated_at: DateTime<Utc>"
@@ -101,7 +105,7 @@ impl Database {
     pub async fn toggle_todo(&self, id: &str) -> Result<Option<Todo>, sqlx::Error> {
         let now = Utc::now();
         
-        let todo = sqlx::query_as!(
+        let todo = sqlx::query_as(
             Todo,
             r#"
             UPDATE todos
@@ -118,7 +122,7 @@ impl Database {
     }
 
     pub async fn delete_todo(&self, id: &str) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query!("DELETE FROM todos WHERE id = ?1", id)
+        let result = sqlx::query("DELETE FROM todos WHERE id = ?1", id)
             .execute(&self.pool)
             .await?;
 
@@ -129,7 +133,7 @@ impl Database {
         let now = Utc::now();
         let tags_json = new_todo.tags.map(|tags| serde_json::to_string(&tags).unwrap_or_default());
 
-        let todo = sqlx::query_as!(
+        let todo = sqlx::query_as(
             Todo,
             r#"
             UPDATE todos
@@ -146,7 +150,7 @@ impl Database {
     }
 
     pub async fn get_categories(&self) -> Result<Vec<String>, sqlx::Error> {
-        let categories = sqlx::query!("SELECT DISTINCT category FROM todos WHERE category IS NOT NULL")
+        let categories = sqlx::query("SELECT DISTINCT category FROM todos WHERE category IS NOT NULL")
             .fetch_all(&self.pool)
             .await?
             .into_iter()

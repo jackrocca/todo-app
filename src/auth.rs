@@ -17,7 +17,7 @@ pub struct Claims {
     pub exp: usize,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
     pub id: String,
     pub username: String,
@@ -65,7 +65,7 @@ impl AuthService {
 
     pub async fn register(&self, req: RegisterRequest) -> Result<AuthResponse, AuthError> {
         // Check if user exists
-        let existing_user = sqlx::query!(
+        let existing_user = sqlx::query(
             "SELECT id FROM users WHERE username = ?1 OR email = ?2",
             req.username,
             req.email
@@ -86,7 +86,7 @@ impl AuthService {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now();
 
-        let user = sqlx::query_as!(
+        let user = sqlx::query_as(
             User,
             r#"
             INSERT INTO users (id, username, email, password_hash, created_at, updated_at)
@@ -112,7 +112,7 @@ impl AuthService {
     }
 
     pub async fn login(&self, req: LoginRequest) -> Result<AuthResponse, AuthError> {
-        let user = sqlx::query_as!(
+        let user = sqlx::query_as(
             User,
             r#"
             SELECT id, username, email, password_hash, created_at as "created_at: DateTime<Utc>", updated_at as "updated_at: DateTime<Utc>"
@@ -175,7 +175,7 @@ impl AuthService {
     }
 
     pub async fn get_user_by_id(&self, user_id: &str) -> Result<Option<User>, AuthError> {
-        let user = sqlx::query_as!(
+        let user = sqlx::query_as(
             User,
             r#"
             SELECT id, username, email, password_hash, created_at as "created_at: DateTime<Utc>", updated_at as "updated_at: DateTime<Utc>"
