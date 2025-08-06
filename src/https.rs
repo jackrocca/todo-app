@@ -1,6 +1,6 @@
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use rustls_pemfile::{certs, pkcs8_private_keys};
-use std::{fs::File, io::BufReader, path::Path, sync::Arc};
+use std::{fs::File, io::BufReader, sync::Arc};
 use tokio_rustls::TlsAcceptor;
 
 pub fn load_tls_config(cert_path: &str, key_path: &str) -> Result<Arc<ServerConfig>, Box<dyn std::error::Error>> {
@@ -39,13 +39,30 @@ pub fn create_tls_acceptor(config: Arc<ServerConfig>) -> TlsAcceptor {
 pub fn generate_self_signed_cert() -> Result<(), Box<dyn std::error::Error>> {
     // This is a placeholder for self-signed certificate generation
     // In production, you should use proper certificates from Let's Encrypt or a CA
-    println!("To use HTTPS, provide certificate files:");
-    println!("  - Certificate: cert.pem");
-    println!("  - Private Key: key.pem");
-    println!("Or set CERT_PATH and KEY_PATH environment variables.");
-    println!();
-    println!("For development, you can generate self-signed certificates with:");
-    println!("  openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes");
-    
+    println!(
+        "{}",
+        "To use HTTPS, provide certificate files:\n  - Certificate: cert.pem\n  - Private Key: key.pem\nOr set CERT_PATH and KEY_PATH environment variables.\n\nFor development, you can generate self-signed certificates with:\n  openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes"
+    );
+
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Instant;
+
+    #[test]
+    fn bench_generate_self_signed_cert() {
+        let iterations = 50;
+        let start = Instant::now();
+        for _ in 0..iterations {
+            generate_self_signed_cert().unwrap();
+        }
+        let duration = start.elapsed();
+        println!(
+            "generate_self_signed_cert {} iterations took: {:?}",
+            iterations, duration
+        );
+    }
 }
